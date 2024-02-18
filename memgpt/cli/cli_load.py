@@ -48,17 +48,29 @@ def insert_passages_into_source(passages: List[Passage], source_name: str, user_
         ms.create_source(source)
 
     # make sure user_id is set for passages
+    passage_chunk = []
+    insert_chunk_size = 1000
     for passage in passages:
         # TODO: attach source IDs
         # passage.source_id = source.id
         passage.user_id = user_id
         passage.data_source = source_name
 
-    # add and save all passages
-    storage.insert_many(passages)
+        # add and save all passages
+        passage_chunk.append(passage)
+        if len(passage_chunk) >= insert_chunk_size:
+            storage.insert_many(passage_chunk)
+            storage.save()
+            passage_chunk = []
 
-    assert orig_size + len(passages) == storage.size(), f"Expected {orig_size + len(passages)} passages, got {storage.size()}"
-    storage.save()
+    if len(passage_chunk) > 0:
+        storage.insert_many(passage_chunk)
+        storage.save()
+
+    # print info
+    num_new_passages = storage.size() - orig_size
+    print(f"Updated {len(passages)}, inserted {num_new_passages} new passages into {source_name}")
+    print("Total passages in source:", storage.size())
 
 
 def store_docs(name, docs, user_id=None, show_progress=True):
@@ -67,12 +79,6 @@ def store_docs(name, docs, user_id=None, show_progress=True):
     config = MemGPTConfig.load()
     if user_id is None:  # assume running local with single user
         user_id = uuid.UUID(config.anon_clientid)
-
-    # ensure doc text is not too long
-    # TODO: replace this to instead split up docs that are too large
-    # (this is a temporary fix to avoid breaking the llama index)
-    for doc in docs:
-        doc.text = check_and_split_text(doc.text, config.default_embedding_config.embedding_model)[0]
 
     # record data source metadata
     ms = MetadataStore(config)
@@ -135,7 +141,7 @@ def store_docs(name, docs, user_id=None, show_progress=True):
                 text=text,
                 data_source=name,
                 embedding=node.embedding,
-                metadata=None,
+                metadata_=None,
                 embedding_dim=config.default_embedding_config.embedding_dim,
                 embedding_model=config.default_embedding_config.embedding_model,
             )

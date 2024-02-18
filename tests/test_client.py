@@ -4,12 +4,18 @@ import os
 from memgpt import MemGPT
 from memgpt.config import MemGPTConfig
 from memgpt import constants
-from memgpt.data_types import LLMConfig, EmbeddingConfig
+from memgpt.data_types import LLMConfig, EmbeddingConfig, Preset
+from memgpt.functions.functions import load_all_function_sets
+from memgpt.prompts import gpt_system
+from memgpt.constants import DEFAULT_PRESET
+
+
 from .utils import wipe_config
 import uuid
 
 
 test_agent_name = f"test_client_{str(uuid.uuid4())}"
+test_preset_name = "test_preset"
 test_agent_state = None
 client = None
 
@@ -17,7 +23,7 @@ test_agent_state_post_message = None
 test_user_id = uuid.uuid4()
 
 
-def test_create_user():
+def test_create_preset():
     wipe_config()
     global client
     if os.getenv("OPENAI_API_KEY"):
@@ -25,31 +31,32 @@ def test_create_user():
     else:
         client = MemGPT(quickstart="memgpt_hosted", user_id=test_user_id)
 
-    user = client.server.create_user({"id": test_user_id})
-    assert user is not None
+    available_functions = load_all_function_sets(merge=True)
+    functions_schema = [f_dict["json_schema"] for f_name, f_dict in available_functions.items()]
+    preset = Preset(
+        name=test_preset_name,
+        user_id=test_user_id,
+        description="A preset for testing the MemGPT client",
+        system=gpt_system.get_system_text(DEFAULT_PRESET),
+        functions_schema=functions_schema,
+    )
+    client.create_preset(preset)
 
 
 def test_create_agent():
     wipe_config()
-    global client
-    if os.getenv("OPENAI_API_KEY"):
-        client = MemGPT(quickstart="openai", user_id=test_user_id)
-    else:
-        client = MemGPT(quickstart="memgpt_hosted", user_id=test_user_id)
-
     config = MemGPTConfig.load()
 
     # ensure user exists
     if not client.server.get_user(user_id=test_user_id):
-        raise ValueError("Run test_create_user first")
+        raise ValueError("User failed to be created")
 
     global test_agent_state
     test_agent_state = client.create_agent(
         agent_config={
             "user_id": test_user_id,
             "name": test_agent_name,
-            "persona": constants.DEFAULT_PERSONA,
-            "human": constants.DEFAULT_HUMAN,
+            "preset": test_preset_name,
         }
     )
     print(f"\n\n[1] CREATED AGENT {test_agent_state.id}!!!\n\tmessages={test_agent_state.state['messages']}")
@@ -121,6 +128,6 @@ def test_save_load():
 
 
 if __name__ == "__main__":
-    test_create_user()
+    test_create_preset()
     test_create_agent()
     test_user_message()

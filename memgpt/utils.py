@@ -10,6 +10,7 @@ import subprocess
 import uuid
 import sys
 import io
+import hashlib
 from typing import List
 import inspect
 from functools import wraps
@@ -667,12 +668,19 @@ def verify_first_message_correctness(
     response_message = response.choices[0].message
 
     # First message should be a call to send_message with a non-empty content
-    if require_send_message and not (response_message.function_call or response_message.tool_calls):
+    if (hasattr(response_message, "function_call") and response_message.function_call is not None) and (
+        hasattr(response_message, "tool_calls") and response_message.tool_calls is not None
+    ):
+        printd(f"First message includes both function call AND tool call: {response_message}")
+        return False
+    elif hasattr(response_message, "function_call") and response_message.function_call is not None:
+        function_call = response_message.function_call
+    elif hasattr(response_message, "tool_calls") and response_message.tool_calls is not None:
+        function_call = response_message.tool_calls[0].function
+    else:
         printd(f"First message didn't include function call: {response_message}")
         return False
 
-    assert not (response_message.function_call and response_message.tool_calls), response_message
-    function_call = response_message.function_call if response_message.function_call else response_message.tool_calls[0].function
     function_name = function_call.name if function_call is not None else ""
     if require_send_message and function_name != "send_message" and function_name != "archival_memory_search":
         printd(f"First message function call wasn't send_message or archival_memory_search: {response_message}")
@@ -929,8 +937,11 @@ def list_human_files():
     memgpt_defaults = os.listdir(defaults_dir)
     memgpt_defaults = [os.path.join(defaults_dir, f) for f in memgpt_defaults if f.endswith(".txt")]
 
-    user_added = os.listdir(user_dir)
-    user_added = [os.path.join(user_dir, f) for f in user_added]
+    if os.path.exists(user_dir):
+        user_added = os.listdir(user_dir)
+        user_added = [os.path.join(user_dir, f) for f in user_added]
+    else:
+        user_added = []
     return memgpt_defaults + user_added
 
 
@@ -942,8 +953,11 @@ def list_persona_files():
     memgpt_defaults = os.listdir(defaults_dir)
     memgpt_defaults = [os.path.join(defaults_dir, f) for f in memgpt_defaults if f.endswith(".txt")]
 
-    user_added = os.listdir(user_dir)
-    user_added = [os.path.join(user_dir, f) for f in user_added]
+    if os.path.exists(user_dir):
+        user_added = os.listdir(user_dir)
+        user_added = [os.path.join(user_dir, f) for f in user_added]
+    else:
+        user_added = []
     return memgpt_defaults + user_added
 
 
@@ -1009,3 +1023,12 @@ def extract_date_from_timestamp(timestamp):
     # Extracts the date (ignoring the time and timezone)
     match = re.match(r"(\d{4}-\d{2}-\d{2})", timestamp)
     return match.group(1) if match else None
+
+
+def create_uuid_from_string(val: str):
+    """
+    Generate consistent UUID from a string
+    from: https://samos-it.com/posts/python-create-uuid-from-random-string-of-words.html
+    """
+    hex_string = hashlib.md5(val.encode("UTF-8")).hexdigest()
+    return uuid.UUID(hex=hex_string)
