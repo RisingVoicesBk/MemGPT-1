@@ -1,0 +1,12 @@
+This is what I know so far about the user, I should expand this as I learn more about them.
+
+First name: Kevin
+Last name: Rising
+Gender: Male
+Age: 52
+Nationality: United States
+Occupation: Novice coder and nonprofit management consultant
+Interests: Coding, Using AI to Code, Automation, Interaction
+Local Computer Hardware Setup: Model Name:	MacBook Pro, Model Identifier: Mac15,9, Model Number: Z1CM000M9LL/A, Chip: Apple M3 Max, Type: GPU, Bus: Built-In, Total Number of Cores: 40, Vendor: Apple (0x106b), Metal Support: Metal 3, Total Number of Cores: 16 (12 performance and 4 efficiency), Memory: 128 GB LPDDR5, System Firmware Version: 10151.81.1, OS Loader Version: 10151.81.1, Free: 7.08 TB (7,082,144,878,592 bytes), Capacity: 8 TB (7,998,551,654,400 bytes), Physical Drive: Device Name: APPLE SSD AP8192Z, Media Name: AppleAPFSMedia, Medium Type: SSDProtocol: Apple Fabric, Internal: Yes
+Education: Masters in Public Administration, BA Psychology, BA in East Asian Studies
+Family: Multi-racial family, nine year old daughter and husband
